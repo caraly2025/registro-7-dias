@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicación Web Interactiva - Registro de 7 Días | Intestino en Equilibrio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- html2pdf.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        .bristol-card-selected {
+            border-color: #0d9488 !important;
+            background-color: #ccfbf1 !important;
+            box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.2);
+        }
+        
+        /* Reglas para generación de PDF e Impresión sin límites de página */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background-color: #ffffff !important; padding: 0 !important; }
+        }
+
+        #pdfContent {
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+            font-size: 11px;
+            line-height: 1.4;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Estilos para tablas extensas en el PDF */
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .pdf-table th, 
+        .pdf-table td {
+            padding: 6px 8px !important;
+            font-size: 10.5px !important;
+            vertical-align: top;
+            word-wrap: break-word; /* Evita que textos largos se salgan de la celda */
+        }
+
+        .pdf-header {
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+        }
+
+        .pdf-section-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 16px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+        }
+
+        /* Regla para evitar que una fila de la tabla se corte por la mitad al cambiar de página */
+        tr {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen pb-12">
+
+    <!-- Encabezado -->
+    <header class="bg-teal-700 text-white shadow-lg no-print">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide">Intestino en Equilibrio</h1>
+                    <p class="text-teal-100 text-sm">Carmen R. Pedreschi - Salud y Nutrición Integral</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="inline-block bg-teal-800 px-3 py-1 rounded-full text-xs font-semibold text-teal-200 uppercase tracking-wider">
+                        Registro Inicial de 7 Días
+                    </span>
+                    <button onclick="limpiarTodoLocalStorage()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
+                        <i class="fa-solid fa-trash-can"></i> Reiniciar Todo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+
+        <!-- Ficha de Datos del Niño -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8 no-print">
+            <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                <i class="fa-solid fa-child text-teal-600"></i> Información Base del Niño/a
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nombre del Niño/a</label>
+                    <input type="text" id="nombreNino" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Nombre completo">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Edad</label>
+                    <input type="text" id="edadNino" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Ej. 4 años">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Peso Actual (kg/lb)</label>
+                    <input type="text" id="pesoNino" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Ej. 16 kg">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nombre del Cuidador</label>
+                    <input type="text" id="nombreCuidador" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Nombre del responsable">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Fecha de Inicio</label>
+                    <input type="date" id="fechaInicio" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Fecha de Finalización</label>
+                    <input type="date" id="fechaFin" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                </div>
+            </div>
+        </section>
+
+        <!-- Navegación por Días -->
+        <div class="flex overflow-x-auto space-x-2 mb-6 pb-2 border-b border-slate-200 no-print" id="tabsDias">
+            <!-- Pestañas generadas dinámicamente -->
+        </div>
+
+        <!-- VISTA FORMULARIO DIARIO -->
+        <div id="vistaFormulario" class="space-y-8 no-print">
+
+            <!-- SECCIÓN 1: Registro Diario de Alimentación -->
+            <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-800 mb-2 flex items-center gap-2 border-b pb-2">
+                    <i class="fa-solid fa-utensils text-teal-600"></i> 1. Registro Diario de Alimentación e Hidratación
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">
+                    Registre la hora real de cada comida y describa en detalle los alimentos, bebidas, preparaciones, salsas o endulzantes consumidos.
+                </p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                            <tr>
+                                <th class="px-3 py-2 w-1/5">Tiempo de comida</th>
+                                <th class="px-3 py-2 w-1/6">Hora Real</th>
+                                <th class="px-3 py-2 w-2/5">Descripción de alimentos y bebidas</th>
+                                <th class="px-3 py-2 w-1/4">Cantidad / Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-slate-700">Desayuno</td>
+                                <td class="px-3 py-2"><input type="time" id="timeDesayuno" class="w-full border rounded p-1 text-xs"></td>
+                                <td class="px-3 py-2"><input type="text" id="descDesayuno" class="w-full border rounded p-1 text-xs" placeholder="Ingredientes, bebidas..."></td>
+                                <td class="px-3 py-2"><input type="text" id="obsDesayuno" class="w-full border rounded p-1 text-xs" placeholder="Porciones / Notas"></td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-slate-700">Merienda Mañana</td>
+                                <td class="px-3 py-2"><input type="time" id="timeMeriendaManana" class="w-full border rounded p-1 text-xs"></td>
+                                <td class="px-3 py-2"><input type="text" id="descMeriendaManana" class="w-full border rounded p-1 text-xs" placeholder="Alimento o snack..."></td>
+                                <td class="px-3 py-2"><input type="text" id="obsMeriendaManana" class="w-full border rounded p-1 text-xs" placeholder="Porciones / Notas"></td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-slate-700">Almuerzo</td>
+                                <td class="px-3 py-2"><input type="time" id="timeAlmuerzo" class="w-full border rounded p-1 text-xs"></td>
+                                <td class="px-3 py-2"><input type="text" id="descAlmuerzo" class="w-full border rounded p-1 text-xs" placeholder="Proteína, carbohidrato..."></td>
+                                <td class="px-3 py-2"><input type="text" id="obsAlmuerzo" class="w-full border rounded p-1 text-xs" placeholder="Porciones / Notas"></td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-slate-700">Merienda Tarde</td>
+                                <td class="px-3 py-2"><input type="time" id="timeMeriendaTarde" class="w-full border rounded p-1 text-xs"></td>
+                                <td class="px-3 py-2"><input type="text" id="descMeriendaTarde" class="w-full border rounded p-1 text-xs" placeholder="Alimento o snack..."></td>
+                                <td class="px-3 py-2"><input type="text" id="obsMeriendaTarde" class="w-full border rounded p-1 text-xs" placeholder="Porciones / Notas"></td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-slate-700">Cena</td>
+                                <td class="px-3 py-2"><input type="time" id="timeCena" class="w-full border rounded p-1 text-xs"></td>
+                                <td class="px-3 py-2"><input type="text" id="descCena" class="w-full border rounded p-1 text-xs" placeholder="Preparación nocturna..."></td>
+                                <td class="px-3 py-2"><input type="text" id="obsCena" class="w-full border rounded p-1 text-xs" placeholder="Porciones / Notas"></td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-slate-700">Alimento Nocturno</td>
+                                <td class="px-3 py-2"><input type="time" id="timeNocturno" class="w-full border rounded p-1 text-xs"></td>
+                                <td class="px-3 py-2"><input type="text" id="descNocturno" class="w-full border rounded p-1 text-xs" placeholder="Agua, leche, infusión..."></td>
+                                <td class="px-3 py-2"><input type="text" id="obsNocturno" class="w-full border rounded p-1 text-xs" placeholder="Porciones / Notas"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Alimentos/bebidas que más se repitieron hoy:</label>
+                        <input type="text" id="txtAlimentosRepetidos" class="w-full border rounded p-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Ej. Huevo, banano, jugo de manzana...">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Alimentos/bebidas nuevos o NO habituales ingeridos hoy:</label>
+                        <input type="text" id="txtAlimentosNuevos" class="w-full border rounded p-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Ej. Suplemento nuevo, galleta marca X...">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block font-bold text-slate-700 mb-1">¿Observó algún síntoma tras alguna comida? (Indique comida, hora y síntoma):</label>
+                        <input type="text" id="txtSintomaComida" class="w-full border rounded p-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Ej. Tras la merienda de la tarde presentó gases y distensión.">
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 2: Medicamentos y Suplementos -->
+            <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 class="text-md font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-pills text-teal-600"></i> 2. Medicamentos, Suplementos y/o Desparasitantes
+                    </h3>
+                    <button type="button" onclick="agregarMedicamento(); guardarDiaActual();" class="bg-teal-50 hover:bg-teal-100 text-teal-700 font-medium text-xs px-3 py-1.5 rounded-lg border border-teal-200 transition">
+                        <i class="fa-solid fa-plus"></i> Añadir Producto
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                            <tr>
+                                <th class="px-3 py-2">Producto</th>
+                                <th class="px-3 py-2">Dosis</th>
+                                <th class="px-3 py-2">Horario</th>
+                                <th class="px-3 py-2">Duración (Días)</th>
+                                <th class="px-3 py-2">Motivo</th>
+                                <th class="px-3 py-2">Tipo</th>
+                                <th class="px-3 py-2 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaMedicamentos"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 3: Registro Intestinal por Evacuación -->
+            <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="flex justify-between items-center mb-2 border-b pb-2">
+                    <div>
+                        <h3 class="text-md font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-toilet text-teal-600"></i> 3. Registro Intestinal por Evacuación
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Añada una entrada por cada vez que el niño/a vaya al baño durante el día.</p>
+                    </div>
+                    <button type="button" onclick="agregarEvacuacion(); guardarDiaActual();" class="bg-teal-600 hover:bg-teal-700 text-white font-medium text-xs px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
+                        <i class="fa-solid fa-plus"></i> Añadir Evacuación
+                    </button>
+                </div>
+
+                <div id="contenedorEvacuaciones" class="space-y-4 mt-4">
+                    <!-- Evacuaciones insertadas dinámicamente -->
+                </div>
+            </section>
+
+            <!-- SECCIÓN 4: Evaluación de Síntomas -->
+            <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-notes-medical text-teal-600"></i> 4. Evaluación Diaria de Síntomas
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-bold text-teal-700 border-b pb-1">Digestivo y Abdominal</h4>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600">Dolor abdominal / Gases (0 a 10)</label>
+                            <input type="range" id="rngDolor" min="0" max="10" value="0" class="w-full" oninput="lblDolor.innerText = this.value">
+                            <span class="text-xs text-slate-500">Nivel: <strong id="lblDolor">0</strong>/10</span>
+                        </div>
+                        <div class="space-y-1 text-sm">
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkNausea" class="rounded text-teal-600"> Náuseas o Mareos</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkVomito" class="rounded text-teal-600"> Vómitos aislados</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkEsfuerzo" class="rounded text-teal-600"> Dolor o esfuerzo al evacuar</label>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-bold text-teal-700 border-b pb-1">Piel y Zona Perianal</h4>
+                        <div class="space-y-1 text-sm">
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkPicazon" class="rounded text-teal-600"> Picazón anal/genital</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkIrritacion" class="rounded text-teal-600"> Irritación perianal</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkBrotes" class="rounded text-teal-600"> Brotes en piel / Dermatitis</label>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-bold text-teal-700 border-b pb-1">Apetito y Sueño</h4>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600">Apetito del día (0 a 10)</label>
+                            <input type="range" id="rngApetito" min="0" max="10" value="5" class="w-full" oninput="lblApetito.innerText = this.value">
+                            <span class="text-xs text-slate-500">Nivel: <strong id="lblApetito">5</strong>/10</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600">Despertares</label>
+                                <input type="number" id="numDespertares" min="0" value="0" class="w-full border rounded p-1 text-sm">
+                            </div>
+                            <div class="flex items-end">
+                                <label class="flex items-center gap-2 mb-2"><input type="checkbox" id="chkSuenoInquieto" class="rounded text-teal-600"> Sueño Inquieto</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-bold text-teal-700 border-b pb-1">Energía y Conducta</h4>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600">Nivel de Energía (0 a 10)</label>
+                            <input type="range" id="rngEnergia" min="0" max="10" value="5" class="w-full" oninput="lblEnergia.innerText = this.value">
+                            <span class="text-xs text-slate-500">Nivel: <strong id="lblEnergia">5</strong>/10</span>
+                        </div>
+                        <div class="space-y-1 text-sm">
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkIrritabilidad" class="rounded text-teal-600"> Irritabilidad</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkFatiga" class="rounded text-teal-600"> Cansancio inusual</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="chkPalidez" class="rounded text-teal-600"> Palidez observada</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Observaciones / Notas del Día</label>
+                    <textarea id="txtObservaciones" rows="2" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Eventos o reacciones especiales..."></textarea>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 5: Filtro de Seguridad -->
+            <section class="bg-red-50 rounded-xl shadow-sm border border-red-200 p-6">
+                <h3 class="text-md font-bold text-red-800 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-red-600"></i> Filtro de Seguridad (Banderas Rojas)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-red-900">
+                    <label class="flex items-center gap-2 bg-white p-2 rounded border border-red-200 cursor-pointer"><input type="checkbox" id="redSangre" class="rounded text-red-600" onchange="verificarRedFlags()"> Sangre roja / Sangrado rectal</label>
+                    <label class="flex items-center gap-2 bg-white p-2 rounded border border-red-200 cursor-pointer"><input type="checkbox" id="redHecesNegras" class="rounded text-red-600" onchange="verificarRedFlags()"> Heces negras o alquitranadas</label>
+                    <label class="flex items-center gap-2 bg-white p-2 rounded border border-red-200 cursor-pointer"><input type="checkbox" id="redDolorIntenso" class="rounded text-red-600" onchange="verificarRedFlags()"> Dolor abdominal intenso</label>
+                    <label class="flex items-center gap-2 bg-white p-2 rounded border border-red-200 cursor-pointer"><input type="checkbox" id="redVomitos" class="rounded text-red-600" onchange="verificarRedFlags()"> Vómitos persistentes</label>
+                    <label class="flex items-center gap-2 bg-white p-2 rounded border border-red-200 cursor-pointer"><input type="checkbox" id="redDeshidratacion" class="rounded text-red-600" onchange="verificarRedFlags()"> Signos de deshidratación</label>
+                    <label class="flex items-center gap-2 bg-white p-2 rounded border border-red-200 cursor-pointer"><input type="checkbox" id="redFiebre" class="rounded text-red-600" onchange="verificarRedFlags()"> Fiebre con deterioro general</label>
+                </div>
+                <div id="alertaMedica" class="hidden mt-4 p-3 bg-red-600 text-white font-bold text-center text-sm rounded-lg">
+                    ⚠️ SEÑAL ROJA DETECTADA: Suspenda la aplicación del protocolo y busque atención médica personalizada.
+                </div>
+            </section>
+        </div>
+
+        <!-- Botones de Acción Formulario -->
+        <div id="accionesFormulario" class="mt-8 flex justify-end gap-4 no-print">
+            <button onclick="guardarDiaActual(); alert('¡Día ' + diaActivo + ' guardado en el navegador!');" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg shadow transition flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Día
+            </button>
+            <button id="btnGenerarResumen" onclick="generarResumenSemanal()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-6 rounded-lg shadow transition flex items-center gap-2">
+                <i class="fa-solid fa-file-invoice"></i> Generar Resumen Semanal
+            </button>
+        </div>
+
+        <!-- VISTA DE RESUMEN Y PDF -->
+        <div id="vistaResumen" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 no-print">
+                <button onclick="volverAlFormulario()" class="text-slate-600 hover:text-slate-800 font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a la Edición
+                </button>
+                <button onclick="descargarPDF()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> Descargar Resumen en PDF
+                </button>
+            </div>
+
+            <!-- Plantilla Imprimible / Generable en PDF (Sin límite de páginas) -->
+            <div id="pdfContent" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-slate-800">
+                <!-- Encabezado -->
+                <div class="text-center border-b pb-3 mb-4 pdf-header">
+                    <h1 class="text-xl font-bold text-teal-800 leading-tight">PROGRAMA INTESTINO EN EQUILIBRIO</h1>
+                    <p class="text-xs text-slate-500 font-semibold uppercase">Carmen R. Pedreschi — Informe Consolidado de 7 Días</p>
+                </div>
+
+                <!-- Datos de Línea Base del Niño -->
+                <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <p><strong>Niño/a:</strong> <span id="pdfNombre">--</span></p>
+                    <p><strong>Edad:</strong> <span id="pdfEdad">--</span></p>
+                    <p><strong>Peso:</strong> <span id="pdfPeso">--</span></p>
+                    <p><strong>Cuidador:</strong> <span id="pdfCuidador">--</span></p>
+                    <p><strong>Fecha Inicio:</strong> <span id="pdfFechaInicio">--</span></p>
+                    <p><strong>Fecha Fin:</strong> <span id="pdfFechaFin">--</span></p>
+                </div>
+
+                <!-- Tabla Resumen Completa por Días -->
+                <h3 class="pdf-section-title text-teal-800 border-b">Registro Cronológico Diario Completo</h3>
+                <div class="overflow-x-auto mb-4">
+                    <table class="pdf-table border border-slate-300">
+                        <thead class="bg-slate-100 uppercase text-xs">
+                            <tr>
+                                <th class="border border-slate-300 w-10 text-center">Día</th>
+                                <th class="border border-slate-300 w-2/5">Alimentación e Hidratación (Detalle de Comidas)</th>
+                                <th class="border border-slate-300 w-1/4">Evacuaciones Intestinales</th>
+                                <th class="border border-slate-300 text-center w-24">Evaluación / Escalas</th>
+                                <th class="border border-slate-300">Tratamientos / Suplementación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pdfTablaDias" class="divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+
+                <!-- Patrones, Reacciones y Observaciones Completa -->
+                <h3 class="pdf-section-title text-teal-800 border-b">Observaciones, Reacciones y Eventos Especiales</h3>
+                <div id="pdfPatrones" class="text-xs space-y-2 mb-4 bg-amber-50/50 p-3 rounded border border-amber-200"></div>
+
+                <!-- Pie de página -->
+                <div class="text-center text-[9px] text-slate-400 mt-6 border-t pt-2">
+                    Información Confidencial · Programa Intestino en Equilibrio · Carmen R. Pedreschi
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Lógica JavaScript -->
+    <script>
+        let diaActivo = 1;
+        let registrosGuardados = {};
+        let contadorEvacuacion = 0;
+        let contadorMed = 0;
+
+        const bristolDescripciones = {
+            1: "Tipo 1: Bolitas duras separadas (Estreñimiento severo)",
+            2: "Tipo 2: Forma de salchicha grumosa (Estreñimiento ligero)",
+            3: "Tipo 3: Salchicha con grietas (Normal)",
+            4: "Tipo 4: Salchicha lisa y blanda (Ideal)",
+            5: "Tipo 5: Trozos blandos bordes limpios (Falta fibra)",
+            6: "Tipo 6: Fragmentos blandos y deshilachados (Diarrea ligera)",
+            7: "Tipo 7: Acuosa, totalmente líquida (Diarrea)"
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            renderTabs();
+            cargarTodoDesdeLocalStorage();
+            cargarDia(1);
+
+            // Escuchar cambios en campos estáticos para auto-guardado
+            document.querySelectorAll("#nombreNino, #edadNino, #pesoNino, #nombreCuidador, #fechaInicio, #fechaFin").forEach(input => {
+                input.addEventListener("input", guardarDatosBaseLocalStorage);
+            });
+
+            // Guardado automático global
+            document.getElementById("vistaFormulario").addEventListener("input", () => {
+                guardarDiaActual();
+            });
+            document.getElementById("vistaFormulario").addEventListener("change", () => {
+                guardarDiaActual();
+            });
+        });
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById("tabsDias");
+            tabsContainer.innerHTML = "";
+            for (let i = 1; i <= 7; i++) {
+                const btn = document.createElement("button");
+                btn.className = `px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors border-b-2 ${
+                    i === diaActivo 
+                    ? "bg-teal-600 text-white border-teal-800" 
+                    : "bg-white text-slate-600 hover:bg-slate-100 border-transparent"
+                }`;
+                btn.innerText = `Día ${i}`;
+                btn.onclick = () => cambiarDia(i);
+                tabsContainer.appendChild(btn);
+            }
+        }
+
+        function cambiarDia(dia) {
+            guardarDiaActual();
+            diaActivo = dia;
+            renderTabs();
+            cargarDia(dia);
+        }
+
+        function agregarMedicamento(datos = null) {
+            contadorMed++;
+            const tbody = document.getElementById("tablaMedicamentos");
+            const tr = document.createElement("tr");
+            tr.id = `med_${contadorMed}`;
+            tr.className = "border-b border-slate-100";
+
+            tr.innerHTML = `
+                <td class="p-1"><input type="text" class="med-nombre w-full border rounded p-1 text-xs" placeholder="Nombre" value="${datos ? datos.nombre : ''}"></td>
+                <td class="p-1"><input type="text" class="med-dosis w-full border rounded p-1 text-xs" placeholder="Dosis" value="${datos ? datos.dosis : ''}"></td>
+                <td class="p-1"><input type="text" class="med-horario w-full border rounded p-1 text-xs" placeholder="Ej. 8:00 AM" value="${datos ? datos.horario : ''}"></td>
+                <td class="p-1"><input type="text" class="med-duracion w-full border rounded p-1 text-xs" placeholder="Días" value="${datos ? datos.duracion : ''}"></td>
+                <td class="p-1"><input type="text" class="med-motivo w-full border rounded p-1 text-xs" placeholder="Motivo" value="${datos ? datos.motivo : ''}"></td>
+                <td class="p-1">
+                    <select class="med-tipo w-full border rounded p-1 text-xs">
+                        <option value="Suplemento" ${datos && datos.tipo === 'Suplemento' ? 'selected' : ''}>Suplemento</option>
+                        <option value="Medicamento" ${datos && datos.tipo === 'Medicamento' ? 'selected' : ''}>Medicamento</option>
+                        <option value="Desparasitante" ${datos && datos.tipo === 'Desparasitante' ? 'selected' : ''}>Desparasitante</option>
+                    </select>
+                </td>
+                <td class="p-1 text-center">
+                    <button type="button" onclick="document.getElementById('med_${contadorMed}').remove(); guardarDiaActual();" class="text-red-500 hover:text-red-700 text-xs">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function agregarEvacuacion(datos = null) {
+            contadorEvacuacion++;
+            const idEvac = `evac_${contadorEvacuacion}`;
+            const contenedor = document.getElementById("contenedorEvacuaciones");
+
+            const div = document.createElement("div");
+            div.id = idEvac;
+            div.className = "item-evacuacion border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 relative";
+
+            let bristolHTML = '';
+            for (let i = 1; i <= 7; i++) {
+                const isSelected = datos && datos.bristol == i;
+                bristolHTML += `
+                    <button type="button" onclick="seleccionarBristol('${idEvac}', ${i})" id="${idEvac}_bristol_${i}" 
+                            class="btn-bristol text-left p-2 rounded-lg border border-slate-200 bg-white hover:border-teal-400 transition text-xs ${isSelected ? 'bristol-card-selected' : ''}">
+                        <div class="font-bold text-teal-800">Tipo ${i}</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">${bristolDescripciones[i].split(':')[1]}</div>
+                    </button>
+                `;
+            }
+
+            div.innerHTML = `
+                <div class="flex justify-between items-center border-b pb-2">
+                    <span class="text-xs font-bold text-teal-800 uppercase flex items-center gap-1">
+                        <i class="fa-solid fa-poop text-amber-700"></i> Entrada de Evacuación
+                    </span>
+                    <button type="button" onclick="eliminarEvacuacion('${idEvac}')" class="text-red-500 hover:text-red-700 text-xs font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-trash"></i> Eliminar
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Hora de la Evacuación</label>
+                        <input type="time" class="evac-hora w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" value="${datos ? datos.hora : ''}">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Escala de Bristol (Seleccione una)</label>
+                        <input type="hidden" class="evac-bristol-val" value="${datos ? datos.bristol : ''}">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                            ${bristolHTML}
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="block text-xs font-bold text-slate-600 uppercase mb-1">Características de esta evacuación:</span>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                        <label class="flex items-center gap-1.5 bg-white p-2 rounded border border-slate-200 cursor-pointer">
+                            <input type="checkbox" class="evac-moco rounded text-teal-600" ${datos && datos.moco ? 'checked' : ''}> Moco
+                        </label>
+                        <label class="flex items-center gap-1.5 bg-white p-2 rounded border border-slate-200 cursor-pointer">
+                            <input type="checkbox" class="evac-grasosas rounded text-teal-600" ${datos && datos.grasosas ? 'checked' : ''}> Grasosas / Brillantes
+                        </label>
+                        <label class="flex items-center gap-1.5 bg-white p-2 rounded border border-slate-200 cursor-pointer">
+                            <input type="checkbox" class="evac-sinDigerir rounded text-teal-600" ${datos && datos.sinDigerir ? 'checked' : ''}> Comida sin digerir
+                        </label>
+                        <label class="flex items-center gap-1.5 bg-white p-2 rounded border border-slate-200 cursor-pointer">
+                            <input type="checkbox" class="evac-fétidas rounded text-teal-600" ${datos && datos.fetidas ? 'checked' : ''}> Olor muy fétido
+                        </label>
+                    </div>
+                </div>
+            `;
+            contenedor.appendChild(div);
+        }
+
+        function seleccionarBristol(idEvac, tipo) {
+            const container = document.getElementById(idEvac);
+            container.querySelectorAll('.btn-bristol').forEach(b => b.classList.remove('bristol-card-selected'));
+            document.getElementById(`${idEvac}_bristol_${tipo}`).classList.add('bristol-card-selected');
+            container.querySelector('.evac-bristol-val').value = tipo;
+            guardarDiaActual();
+        }
+
+        function eliminarEvacuacion(id) {
+            document.getElementById(id).remove();
+            guardarDiaActual();
+        }
+
+        function verificarRedFlags() {
+            const ids = ['redSangre', 'redHecesNegras', 'redDolorIntenso', 'redVomitos', 'redDeshidratacion', 'redFiebre'];
+            const hayAlerta = ids.some(id => document.getElementById(id).checked);
+            document.getElementById('alertaMedica').classList.toggle('hidden', !hayAlerta);
+        }
+
+        // --- MANEJO DE LOCALSTORAGE ---
+
+        function guardarDatosBaseLocalStorage() {
+            const baseData = {
+                nombreNino: document.getElementById("nombreNino").value,
+                edadNino: document.getElementById("edadNino").value,
+                pesoNino: document.getElementById("pesoNino").value,
+                nombreCuidador: document.getElementById("nombreCuidador").value,
+                fechaInicio: document.getElementById("fechaInicio").value,
+                fechaFin: document.getElementById("fechaFin").value
+            };
+            localStorage.setItem("intestino_baseData", JSON.stringify(baseData));
+        }
+
+        function guardarDiaActual() {
+            const medicamentos = [];
+            document.querySelectorAll("#tablaMedicamentos tr").forEach(tr => {
+                medicamentos.push({
+                    nombre: tr.querySelector(".med-nombre")?.value || "",
+                    dosis: tr.querySelector(".med-dosis")?.value || "",
+                    horario: tr.querySelector(".med-horario")?.value || "",
+                    duracion: tr.querySelector(".med-duracion")?.value || "",
+                    motivo: tr.querySelector(".med-motivo")?.value || "",
+                    tipo: tr.querySelector(".med-tipo")?.value || "Suplemento"
+                });
+            });
+
+            const evacuaciones = [];
+            document.querySelectorAll("#contenedorEvacuaciones .item-evacuacion").forEach(item => {
+                evacuaciones.push({
+                    hora: item.querySelector(".evac-hora")?.value || "",
+                    bristol: item.querySelector(".evac-bristol-val")?.value || "",
+                    moco: item.querySelector(".evac-moco")?.checked || false,
+                    grasosas: item.querySelector(".evac-grasosas")?.checked || false,
+                    sinDigerir: item.querySelector(".evac-sinDigerir")?.checked || false,
+                    fetidas: item.querySelector(".evac-fétidas")?.checked || false
+                });
+            });
+
+            registrosGuardados[diaActivo] = {
+                comidas: {
+                    desayuno: { hora: document.getElementById("timeDesayuno").value, desc: document.getElementById("descDesayuno").value, obs: document.getElementById("obsDesayuno").value },
+                    mManana: { hora: document.getElementById("timeMeriendaManana").value, desc: document.getElementById("descMeriendaManana").value, obs: document.getElementById("obsMeriendaManana").value },
+                    almuerzo: { hora: document.getElementById("timeAlmuerzo").value, desc: document.getElementById("descAlmuerzo").value, obs: document.getElementById("obsAlmuerzo").value },
+                    mTarde: { hora: document.getElementById("timeMeriendaTarde").value, desc: document.getElementById("descMeriendaTarde").value, obs: document.getElementById("obsMeriendaTarde").value },
+                    cena: { hora: document.getElementById("timeCena").value, desc: document.getElementById("descCena").value, obs: document.getElementById("obsCena").value },
+                    nocturno: { hora: document.getElementById("timeNocturno").value, desc: document.getElementById("descNocturno").value, obs: document.getElementById("obsNocturno").value }
+                },
+                repetidos: document.getElementById("txtAlimentosRepetidos").value,
+                nuevos: document.getElementById("txtAlimentosNuevos").value,
+                sintomasComida: document.getElementById("txtSintomaComida").value,
+                medicamentos: medicamentos,
+                evacuaciones: evacuaciones,
+                sintomas: {
+                    dolor: document.getElementById("rngDolor").value,
+                    nausea: document.getElementById("chkNausea").checked,
+                    vomito: document.getElementById("chkVomito").checked,
+                    esfuerzo: document.getElementById("chkEsfuerzo").checked,
+                    picazon: document.getElementById("chkPicazon").checked,
+                    irritacion: document.getElementById("chkIrritacion").checked,
+                    brotes: document.getElementById("chkBrotes").checked,
+                    apetito: document.getElementById("rngApetito").value,
+                    despertares: document.getElementById("numDespertares").value,
+                    suenoInquieto: document.getElementById("chkSuenoInquieto").checked,
+                    energia: document.getElementById("rngEnergia").value,
+                    irritabilidad: document.getElementById("chkIrritabilidad").checked,
+                    fatiga: document.getElementById("chkFatiga").checked,
+                    palidez: document.getElementById("chkPalidez").checked
+                },
+                observaciones: document.getElementById("txtObservaciones").value,
+                redFlags: {
+                    sangre: document.getElementById("redSangre").checked,
+                    hecesNegras: document.getElementById("redHecesNegras").checked,
+                    dolorIntenso: document.getElementById("redDolorIntenso").checked,
+                    vomitos: document.getElementById("redVomitos").checked,
+                    deshidratacion: document.getElementById("redDeshidratacion").checked,
+                    fiebre: document.getElementById("redFiebre").checked
+                }
+            };
+
+            localStorage.setItem("intestino_registros", JSON.stringify(registrosGuardados));
+        }
+
+        function cargarTodoDesdeLocalStorage() {
+            const baseData = JSON.parse(localStorage.getItem("intestino_baseData"));
+            if (baseData) {
+                document.getElementById("nombreNino").value = baseData.nombreNino || "";
+                document.getElementById("edadNino").value = baseData.edadNino || "";
+                document.getElementById("pesoNino").value = baseData.pesoNino || "";
+                document.getElementById("nombreCuidador").value = baseData.nombreCuidador || "";
+                document.getElementById("fechaInicio").value = baseData.fechaInicio || "";
+                document.getElementById("fechaFin").value = baseData.fechaFin || "";
+            }
+
+            const registros = JSON.parse(localStorage.getItem("intestino_registros"));
+            if (registros) {
+                registrosGuardados = registros;
+            }
+        }
+
+        function limpiarTodoLocalStorage() {
+            if (confirm("¿Está seguro de borrar todos los datos guardados en este dispositivo? Se perderá el avance actual.")) {
+                localStorage.removeItem("intestino_baseData");
+                localStorage.removeItem("intestino_registros");
+                registrosGuardados = {};
+                location.reload();
+            }
+        }
+
+        function cargarDia(dia) {
+            limpiarFormulario();
+            const data = registrosGuardados[dia];
+            if (!data) return;
+
+            document.getElementById("timeDesayuno").value = data.comidas.desayuno.hora;
+            document.getElementById("descDesayuno").value = data.comidas.desayuno.desc;
+            document.getElementById("obsDesayuno").value = data.comidas.desayuno.obs;
+
+            document.getElementById("timeMeriendaManana").value = data.comidas.mManana.hora;
+            document.getElementById("descMeriendaManana").value = data.comidas.mManana.desc;
+            document.getElementById("obsMeriendaManana").value = data.comidas.mManana.obs;
+
+            document.getElementById("timeAlmuerzo").value = data.comidas.almuerzo.hora;
+            document.getElementById("descAlmuerzo").value = data.comidas.almuerzo.desc;
+            document.getElementById("obsAlmuerzo").value = data.comidas.almuerzo.obs;
+
+            document.getElementById("timeMeriendaTarde").value = data.comidas.mTarde.hora;
+            document.getElementById("descMeriendaTarde").value = data.comidas.mTarde.desc;
+            document.getElementById("obsMeriendaTarde").value = data.comidas.mTarde.obs;
+
+            document.getElementById("timeCena").value = data.comidas.cena.hora;
+            document.getElementById("descCena").value = data.comidas.cena.desc;
+            document.getElementById("obsCena").value = data.comidas.cena.obs;
+
+            document.getElementById("timeNocturno").value = data.comidas.nocturno.hora;
+            document.getElementById("descNocturno").value = data.comidas.nocturno.desc;
+            document.getElementById("obsNocturno").value = data.comidas.nocturno.obs;
+
+            document.getElementById("txtAlimentosRepetidos").value = data.repetidos;
+            document.getElementById("txtAlimentosNuevos").value = data.nuevos;
+            document.getElementById("txtSintomaComida").value = data.sintomasComida;
+
+            data.medicamentos.forEach(med => agregarMedicamento(med));
+            data.evacuaciones.forEach(evac => agregarEvacuacion(evac));
+
+            document.getElementById("rngDolor").value = data.sintomas.dolor;
+            document.getElementById("lblDolor").innerText = data.sintomas.dolor;
+            document.getElementById("chkNausea").checked = data.sintomas.nausea;
+            document.getElementById("chkVomito").checked = data.sintomas.vomito;
+            document.getElementById("chkEsfuerzo").checked = data.sintomas.esfuerzo;
+
+            document.getElementById("chkPicazon").checked = data.sintomas.picazon;
+            document.getElementById("chkIrritacion").checked = data.sintomas.irritacion;
+            document.getElementById("chkBrotes").checked = data.sintomas.brotes;
+
+            document.getElementById("rngApetito").value = data.sintomas.apetito;
+            document.getElementById("lblApetito").innerText = data.sintomas.apetito;
+            document.getElementById("numDespertares").value = data.sintomas.despertares;
+            document.getElementById("chkSuenoInquieto").checked = data.sintomas.suenoInquieto;
+
+            document.getElementById("rngEnergia").value = data.sintomas.energia;
+            document.getElementById("lblEnergia").innerText = data.sintomas.energia;
+            document.getElementById("chkIrritabilidad").checked = data.sintomas.irritabilidad;
+            document.getElementById("chkFatiga").checked = data.sintomas.fatiga;
+            document.getElementById("chkPalidez").checked = data.sintomas.palidez;
+
+            document.getElementById("txtObservaciones").value = data.observaciones;
+
+            document.getElementById("redSangre").checked = data.redFlags.sangre;
+            document.getElementById("redHecesNegras").checked = data.redFlags.hecesNegras;
+            document.getElementById("redDolorIntenso").checked = data.redFlags.dolorIntenso;
+            document.getElementById("redVomitos").checked = data.redFlags.vomitos;
+            document.getElementById("redDeshidratacion").checked = data.redFlags.deshidratacion;
+            document.getElementById("redFiebre").checked = data.redFlags.fiebre;
+            verificarRedFlags();
+        }
+
+        function limpiarFormulario() {
+            document.querySelectorAll("#vistaFormulario input[type='text'], #vistaFormulario input[type='time'], #vistaFormulario textarea").forEach(i => i.value = "");
+            document.querySelectorAll("#vistaFormulario input[type='checkbox']").forEach(i => i.checked = false);
+            document.querySelectorAll("#vistaFormulario input[type='number']").forEach(i => i.value = "0");
+            
+            document.getElementById("rngDolor").value = 0; document.getElementById("lblDolor").innerText = 0;
+            document.getElementById("rngApetito").value = 5; document.getElementById("lblApetito").innerText = 5;
+            document.getElementById("rngEnergia").value = 5; document.getElementById("lblEnergia").innerText = 5;
+
+            document.getElementById("tablaMedicamentos").innerHTML = "";
+            document.getElementById("contenedorEvacuaciones").innerHTML = "";
+            verificarRedFlags();
+        }
+
+        function formatearComidas(comidasData) {
+            if (!comidasData) return "Sin datos registrados";
+
+            const mapaComidas = {
+                desayuno: "Desayuno",
+                mManana: "Merienda Mañana",
+                almuerzo: "Almuerzo",
+                mTarde: "Merienda Tarde",
+                cena: "Cena",
+                nocturno: "Nocturno"
+            };
+
+            let filasComidas = [];
+
+            for (const [clave, etiqueta] of Object.entries(mapaComidas)) {
+                const item = comidasData[clave];
+                if (item && (item.desc || item.hora)) {
+                    const horaStr = item.hora ? `<strong>[${item.hora}]</strong> ` : "";
+                    const obsStr = item.obs ? ` <em>(${item.obs})</em>` : "";
+                    filasComidas.push(`• <strong>${etiqueta}:</strong> ${horaStr}${item.desc || "Registrado"}${obsStr}`);
+                }
+            }
+
+            return filasComidas.length > 0 ? filasComidas.join("<br>") : "Sin registro de comidas";
+        }
+
+        function generarResumenSemanal() {
+            guardarDiaActual();
+
+            document.getElementById("pdfNombre").innerText = document.getElementById("nombreNino").value || "--";
+            document.getElementById("pdfEdad").innerText = document.getElementById("edadNino").value || "--";
+            document.getElementById("pdfPeso").innerText = document.getElementById("pesoNino").value || "--";
+            document.getElementById("pdfCuidador").innerText = document.getElementById("nombreCuidador").value || "--";
+            document.getElementById("pdfFechaInicio").innerText = document.getElementById("fechaInicio").value || "--";
+            document.getElementById("pdfFechaFin").innerText = document.getElementById("fechaFin").value || "--";
+
+            const tbody = document.getElementById("pdfTablaDias");
+            tbody.innerHTML = "";
+            const divPatrones = document.getElementById("pdfPatrones");
+            divPatrones.innerHTML = "";
+
+            for (let i = 1; i <= 7; i++) {
+                const diaData = registrosGuardados[i];
+                const tr = document.createElement("tr");
+
+                if (!diaData) {
+                    tr.innerHTML = `
+                        <td class="border border-slate-300 px-2 py-1.5 font-bold text-center">${i}</td>
+                        <td class="border border-slate-300 px-2 py-1.5 text-slate-400 italic" colspan="4">Sin registro para este día</td>
+                    `;
+                } else {
+                    let detAlim = formatearComidas(diaData.comidas);
+                    if (diaData.repetidos) detAlim += `<br><span class="text-[10px] text-teal-700"><strong>Repetidos:</strong> ${diaData.repetidos}</span>`;
+                    if (diaData.nuevos) detAlim += `<br><span class="text-[10px] text-amber-700"><strong>Nuevos:</strong> ${diaData.nuevos}</span>`;
+
+                    let detEvac = diaData.evacuaciones.map(e => {
+                        let extras = [];
+                        if (e.moco) extras.push("Moco");
+                        if (e.grasosas) extras.push("Grasosas");
+                        if (e.sinDigerir) extras.push("Sin digerir");
+                        if (e.fetidas) extras.push("Fétidas");
+                        return `• <strong>${e.hora || 'S/H'}</strong>: Bristol ${e.bristol || '?'} ${extras.length ? '(' + extras.join(', ') + ')' : ''}`;
+                    }).join("<br>") || "Sin evacuaciones";
+
+                    let detMeds = diaData.medicamentos.map(m => `• ${m.nombre} (${m.dosis}) ${m.horario ? '[' + m.horario + ']' : ''}`).join("<br>") || "Ninguno";
+
+                    tr.innerHTML = `
+                        <td class="border border-slate-300 px-2 py-1.5 font-bold text-center">${i}</td>
+                        <td class="border border-slate-300 px-2 py-1.5 leading-tight">${detAlim}</td>
+                        <td class="border border-slate-300 px-2 py-1.5 leading-tight">${detEvac}</td>
+                        <td class="border border-slate-300 px-2 py-1.5 text-center">Dolor: ${diaData.sintomas.dolor}/10<br>Apetito: ${diaData.sintomas.apetito}/10</td>
+                        <td class="border border-slate-300 px-2 py-1.5 leading-tight">${detMeds}</td>
+                    `;
+
+                    if (diaData.observaciones || diaData.sintomasComida) {
+                        const pat = document.createElement("p");
+                        pat.innerHTML = `<strong>Día ${i}:</strong> ${diaData.sintomasComida ? '<em>Reacción tras comida:</em> ' + diaData.sintomasComida + '. ' : ''}${diaData.observaciones || ''}`;
+                        divPatrones.appendChild(pat);
+                    }
+                }
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById("vistaFormulario").classList.add("hidden");
+            document.getElementById("accionesFormulario").classList.add("hidden");
+            document.getElementById("vistaResumen").classList.remove("hidden");
+        }
+
+        function volverAlFormulario() {
+            document.getElementById("vistaResumen").classList.add("hidden");
+            document.getElementById("vistaFormulario").classList.remove("hidden");
+            document.getElementById("accionesFormulario").classList.remove("hidden");
+        }
+
+        function descargarPDF() {
+            const el = document.getElementById("pdfContent");
+            const nombrePaciente = document.getElementById("nombreNino").value || 'Paciente';
+
+            const opt = {
+                margin:       [0.4, 0.4, 0.4, 0.4],
+                filename:     `Registro_Intestino_En_Equilibrio_${nombrePaciente}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false,
+                    scrollY: 0
+                },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+                pagebreak:    { 
+                    mode: ['avoid-all', 'css', 'legacy']
+                }
+            };
+
+            html2pdf().set(opt).from(el).save();
+        }
+    </script>
+</body>
+</html>
